@@ -20,7 +20,7 @@ const PORT = process.env.PORT ?? 3000;
 // Kafka configuration
 const kafka = new Kafka({
   clientId: "order-service",
-  brokers: ["localhost:9094"],
+  brokers: ["localhost:9094", "localhost:9095", "localhost:9096"],
 });
 
 /**

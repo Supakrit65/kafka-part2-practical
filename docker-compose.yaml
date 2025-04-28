@@ -1,57 +1,127 @@
 version: '3.8'
 
+# -------------------------------------------------------------------
+# Network definition: All services communicate over a single private bridge
+# -------------------------------------------------------------------
 networks:
   app-tier:
     driver: bridge
 
-# Declare named volumes for persistence
+# -------------------------------------------------------------------
+# Persistent volumes: Ensure Zookeeper and each broker retain data
+# -------------------------------------------------------------------
 volumes:
   zookeeper_data:
-  kafka_data:
+  kafka_data1:
+  kafka_data2:
+  kafka_data3:
 
 services:
+  # -----------------------------------------------------------------
+  # Zookeeper: Coordinates Kafka brokers
+  # -----------------------------------------------------------------
   zookeeper:
     image: bitnami/zookeeper:3.9
+    container_name: zookeeper
     environment:
-      - ALLOW_ANONYMOUS_LOGIN=yes
+      - ALLOW_ANONYMOUS_LOGIN=yes       # Enable insecure mode for demo/local use
     ports:
-      - 2181:2181
+      - 2181:2181                       # Client port for Kafka brokers
     networks:
       - app-tier
-    # Persist ZK data so that state survives container restarts
     volumes:
       - zookeeper_data:/bitnami/zookeeper
 
-  kafka:
+  # -----------------------------------------------------------------
+  # Kafka Broker 1
+  # -----------------------------------------------------------------
+  kafka1:
     image: bitnami/kafka:3.9
-    ports:
-      - 9094:9094
-    environment:
-      # unique broker ID
-      - KAFKA_CFG_NODE_ID=0
-      # connect to ZooKeeper for metadata
-      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
-      # internal & external listeners
-      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,EXTERNAL://:9094
-      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
-      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+    container_name: kafka1
     depends_on:
       - zookeeper
     networks:
       - app-tier
-    # Persist Kafka’s log/data dir so topics & messages survive restarts
+    ports:
+      - 9094:9094                       # External listener port
+    environment:
+      - KAFKA_CFG_BROKER_ID=1
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      # Define two listeners: one for inter-broker and one for client tools
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,EXTERNAL://:9094
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka1:9092,EXTERNAL://localhost:9094
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      # Cluster replication settings
+      - KAFKA_CFG_DEFAULT_REPLICATION_FACTOR=3
+      - KAFKA_CFG_MIN_INSYNC_REPLICAS=2
+      - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=3
     volumes:
-      - kafka_data:/bitnami/kafka
+      - kafka_data1:/bitnami/kafka
 
+  # -----------------------------------------------------------------
+  # Kafka Broker 2
+  # -----------------------------------------------------------------
+  kafka2:
+    image: bitnami/kafka:3.9
+    container_name: kafka2
+    depends_on:
+      - zookeeper
+    networks:
+      - app-tier
+    ports:
+      - 9095:9095
+    environment:
+      - KAFKA_CFG_BROKER_ID=2
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,EXTERNAL://:9095
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka2:9092,EXTERNAL://localhost:9095
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - KAFKA_CFG_DEFAULT_REPLICATION_FACTOR=3
+      - KAFKA_CFG_MIN_INSYNC_REPLICAS=2
+      - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=3
+    volumes:
+      - kafka_data2:/bitnami/kafka
+
+  # -----------------------------------------------------------------
+  # Kafka Broker 3
+  # -----------------------------------------------------------------
+  kafka3:
+    image: bitnami/kafka:3.9
+    container_name: kafka3
+    depends_on:
+      - zookeeper
+    networks:
+      - app-tier
+    ports:
+      - 9096:9096
+    environment:
+      - KAFKA_CFG_BROKER_ID=3
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,EXTERNAL://:9096
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka3:9092,EXTERNAL://localhost:9096
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - KAFKA_CFG_DEFAULT_REPLICATION_FACTOR=3
+      - KAFKA_CFG_MIN_INSYNC_REPLICAS=2
+      - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=3
+    volumes:
+      - kafka_data3:/bitnami/kafka
+
+  # -----------------------------------------------------------------
+  # Kafka UI: Web console for managing clusters and topics
+  # -----------------------------------------------------------------
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    depends_on:
+      - zookeeper
+      - kafka1
+      - kafka2
+      - kafka3
+    networks:
+      - app-tier
     ports:
       - 8080:8080
     environment:
-      - KAFKA_CLUSTERS_0_NAME=local
-      - KAFKA_CLUSTERS_0_BOOTSTRAP_SERVERS=kafka:9092
+      - KAFKA_CLUSTERS_0_NAME=localCluster
+      - KAFKA_CLUSTERS_0_BOOTSTRAP_SERVERS=kafka1:9092,kafka2:9092,kafka3:9092
       - KAFKA_CLUSTERS_0_ZOOKEEPER=zookeeper:2181
-    depends_on:
-      - kafka
-    networks:
-      - app-tier

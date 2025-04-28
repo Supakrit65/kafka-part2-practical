@@ -1,25 +1,28 @@
 {
+  "name": "swe-kafka-part2",
+  "version": "1.0.0",
+  "description": "Kafka Part 2 services (order, mailer, user) and init script",
+  "type": "module",
   "scripts": {
-    "dev": "ts-node src/init.ts",
-    "order-service": "node --no-warnings --loader ts-node/esm src/order-service/order.service.ts",
-    "mailer-service": "node --no-warnings --loader ts-node/esm src/mailer-service/mailer.service.ts",
-    "user-service": "node --no-warnings --loader ts-node/esm src/user-service/user.service.ts",
-    "ac": "node --no-warnings --loader ts-node/esm src/ac.ts"
-  },
-  "devDependencies": {
-    "@types/autocannon": "^7.12.6",
-    "@types/body-parser": "^1.19.5",
-    "@types/express": "^5.0.1",
-    "eslint-plugin-import": "^2.31.0",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.8.3"
+    "dev": "tsx src/init.ts",
+    "order-service": "tsx src/order-service/order.service.ts",
+    "mailer-service": "tsx src/mailer-service/mailer.service.ts",
+    "user-service": "tsx src/user-service/user.service.ts",
+    "ac": "tsx src/ac.ts"
   },
   "dependencies": {
-    "autocannon": "^8.0.0",
-    "body-parser": "^2.2.0",
     "express": "^5.1.0",
+    "body-parser": "^2.2.0",
     "kafkajs": "^2.2.4",
-    "nanoid": "^5.1.5"
+    "nanoid": "^5.1.5",
+    "autocannon": "^8.0.0"
   },
-  "type": "module"
+  "devDependencies": {
+    "typescript": "^5.8.3",
+    "tsx": "^3.12.7",
+    "@types/express": "^5.0.1",
+    "@types/body-parser": "^1.19.5",
+    "@types/autocannon": "^7.12.6",
+    "eslint-plugin-import": "^2.31.0"
+  }
 }

@@ -92,7 +92,7 @@ class UserService {
 
 // === Entry point ===
 
-const userService = new UserService(["localhost:9094"]);
+const userService = new UserService(["localhost:9094", "localhost:9095", "localhost:9096"]);
 
 async function bootstrap() {
   try {

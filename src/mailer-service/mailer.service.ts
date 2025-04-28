@@ -96,7 +96,7 @@ class MailerService {
 
 // === Entry point ===
 
-const mailerService = new MailerService(["localhost:9094"]);
+const mailerService = new MailerService(["localhost:9094", "localhost:9095", "localhost:9096"]);
 
 async function bootstrap() {
   try {

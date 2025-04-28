@@ -1,18 +1,18 @@
 import { ITopicConfig, Kafka } from "kafkajs";
 
 const clientId = "init";
-const brokers = ["localhost:9094"];
+const brokers = ["localhost:9094", "localhost:9095", "localhost:9096"];
 
 const topicsToCreate: ITopicConfig[] = [
   {
     topic: "order.created",
     numPartitions: 3,
-    replicationFactor: 1,
+    replicationFactor: 3,
   },
   {
     topic: "user.updated",
     numPartitions: 1,
-    replicationFactor: 1,
+    replicationFactor: 3,
   },
 ];
 
