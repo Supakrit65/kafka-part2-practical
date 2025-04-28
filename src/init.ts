@@ -44,10 +44,16 @@ const main = async () => {
       console.log("No user-created topics to delete.");
     }
 
+    // Wait for a short period to ensure topics are deleted
+    await new Promise(resolve => setTimeout(resolve, 5000));
+
     const created = await admin.createTopics({
       topics: topicsToCreate,
       waitForLeaders: true,
     });
+
+    // Wait for a short period to ensure topics are created
+    await new Promise(resolve => setTimeout(resolve, 5000));
 
     console.log("Created topics:", created);
   } catch (error) {

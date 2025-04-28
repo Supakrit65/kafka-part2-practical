@@ -1,0 +1,170 @@
+version: '3.8'
+
+# -------------------------------------------------------------------
+# Network definition: All services communicate over a single private bridge
+# -------------------------------------------------------------------
+networks:
+  app-tier:
+    driver: bridge
+
+# -------------------------------------------------------------------
+# Persistent volumes: Ensure each broker retains its own data
+# -------------------------------------------------------------------
+volumes:
+  kafka_data1:
+  kafka_data2:
+  kafka_data3:
+
+services:
+  # -----------------------------------------------------------------
+  # Kafka Broker 1 (Broker + Controller)
+  # -----------------------------------------------------------------
+  kafka1:
+    image: bitnami/kafka:3.9
+    container_name: kafka1
+    networks:
+      - app-tier
+    ports:
+      - 9094:9094   # 🔵 External listener for clients outside Docker (localhost:9094)
+    environment:
+      # -------------------------------------------------------------------
+      # 🛠️ KRaft (Kafka Raft Mode) settings
+      # -------------------------------------------------------------------
+      - KAFKA_CFG_NODE_ID=1
+        # 🔵 Unique ID for this Kafka node (must be different across cluster)
+      
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker
+        # 🔵 Node acts as BOTH Controller (manages metadata) AND Broker (handles client data)
+
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka1:9093,2@kafka2:9093,3@kafka3:9093
+        # 🔵 Define all participating nodes for Raft voting (for Controller Leader election)
+        # Format: <NodeID>@<host>:<port>
+        # Must be IDENTICAL across all brokers.
+
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+        # 🔵 Specifies which listener is used EXCLUSIVELY for internal controller-to-controller communication (Raft votes, metadata sync)
+
+      # -------------------------------------------------------------------
+      # 🌐 Listener settings: define how brokers and clients communicate
+      # -------------------------------------------------------------------
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,EXTERNAL://:9094,CONTROLLER://:9093
+        # 🔵 Bind three listeners inside the container:
+        # - PLAINTEXT (internal broker-to-broker communication)
+        # - EXTERNAL (client access from outside Docker)
+        # - CONTROLLER (internal Raft Controller communication)
+
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka1:9092,EXTERNAL://localhost:9094
+        # 🔵 How this node ADVERTISES itself to the world:
+        # - Other brokers connect to kafka1:9092 inside Docker
+        # - External clients connect via localhost:9094
+
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+        # 🔵 Map listener names to security protocols.
+        # (Here all listeners use PLAINTEXT; no SSL/SASL used.)
+
+      # -------------------------------------------------------------------
+      # 🏢 Cluster-wide settings (Replication, durability, reliability)
+      # -------------------------------------------------------------------
+      - KAFKA_KRAFT_CLUSTER_ID=tan4668
+        # 🔵 Mandatory fixed Cluster ID for the whole KRaft cluster.
+        # Generate once using: kafka-storage.sh random-uuid
+        # ALL nodes must use the SAME Cluster ID.
+
+      - KAFKA_CFG_DEFAULT_REPLICATION_FACTOR=3
+        # 🔵 Default replication factor when creating topics (3 replicas for durability).
+
+      - KAFKA_CFG_MIN_INSYNC_REPLICAS=2
+        # 🔵 Minimum replicas that must ACK a write before producer succeeds.
+        # Helps ensure fault-tolerant writes (survive broker failures).
+
+      - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=3
+        # 🔵 Replication factor for internal Kafka system topics (like __consumer_offsets).
+        # Critical for tracking consumer group progress safely.
+    volumes:
+      - kafka_data1:/bitnami/kafka
+
+  # -----------------------------------------------------------------
+  # Kafka Broker 2
+  # -----------------------------------------------------------------
+  kafka2:
+    image: bitnami/kafka:3.9
+    container_name: kafka2
+    networks:
+      - app-tier
+    ports:
+      - 9095:9095
+    environment:
+      # -------------------------------------------------------------------
+      # 🛠️ KRaft (Kafka Raft Mode) settings
+      # -------------------------------------------------------------------
+      - KAFKA_CFG_NODE_ID=2
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka1:9093,2@kafka2:9093,3@kafka3:9093
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      # -------------------------------------------------------------------
+      # 🌐 Listener settings: define how brokers and clients communicate
+      # -------------------------------------------------------------------
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,EXTERNAL://:9095,CONTROLLER://:9093
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka2:9092,EXTERNAL://localhost:9095
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      # -------------------------------------------------------------------
+      # 🏢 Cluster-wide settings (Replication, durability, reliability)
+      # -------------------------------------------------------------------
+      - KAFKA_KRAFT_CLUSTER_ID=tan4668
+      - KAFKA_CFG_DEFAULT_REPLICATION_FACTOR=3
+      - KAFKA_CFG_MIN_INSYNC_REPLICAS=2
+      - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=3
+    volumes:
+      - kafka_data2:/bitnami/kafka
+
+  # -----------------------------------------------------------------
+  # Kafka Broker 3
+  # -----------------------------------------------------------------
+  kafka3:
+    image: bitnami/kafka:3.9
+    container_name: kafka3
+    networks:
+      - app-tier
+    ports:
+      - 9096:9096
+    environment:
+      # -------------------------------------------------------------------
+      # 🛠️ KRaft (Kafka Raft Mode) settings
+      # -------------------------------------------------------------------
+      - KAFKA_CFG_NODE_ID=3
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka1:9093,2@kafka2:9093,3@kafka3:9093
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      # -------------------------------------------------------------------
+      # 🌐 Listener settings: define how brokers and clients communicate
+      # -------------------------------------------------------------------
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,EXTERNAL://:9096,CONTROLLER://:9093
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka3:9092,EXTERNAL://localhost:9096
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      # -------------------------------------------------------------------
+      # 🏢 Cluster-wide settings (Replication, durability, reliability)
+      # -------------------------------------------------------------------
+      - KAFKA_KRAFT_CLUSTER_ID=tan4668
+      - KAFKA_CFG_DEFAULT_REPLICATION_FACTOR=3
+      - KAFKA_CFG_MIN_INSYNC_REPLICAS=2
+      - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=3
+    volumes:
+      - kafka_data3:/bitnami/kafka
+
+  # -----------------------------------------------------------------
+  # Kafka UI: Web console for managing clusters and topics
+  # -----------------------------------------------------------------
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    depends_on:
+      - kafka1
+      - kafka2
+      - kafka3
+    networks:
+      - app-tier
+    ports:
+      - 8080:8080
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=localCluster
+      - KAFKA_CLUSTERS_0_BOOTSTRAP_SERVERS=kafka1:9092,kafka2:9092,kafka3:9092

@@ -1,0 +1,177 @@
+version: '3.8'
+
+# ------------------------------------------------------------------------------
+# Network: Private bridge network for internal communication
+# ------------------------------------------------------------------------------
+networks:
+  app-tier:
+    driver: bridge
+
+# ------------------------------------------------------------------------------
+# Volumes: Persistent storage for controller and broker nodes
+# ------------------------------------------------------------------------------
+volumes:
+  controller_data1:
+  controller_data2:
+  controller_data3:
+  kafka_data1:
+  kafka_data2:
+  kafka_data3:
+
+# ------------------------------------------------------------------------------
+# Services: Controllers, Brokers, and Kafka UI
+# ------------------------------------------------------------------------------
+services:
+
+  # ------------------------------------------------------------------------------
+  # Kafka Controller Node 1
+  # ------------------------------------------------------------------------------
+  controller1:
+    image: bitnami/kafka:3.9
+    container_name: controller1
+    networks:
+      - app-tier
+    environment:
+      - KAFKA_CFG_NODE_ID=1                     # Unique node ID
+      - KAFKA_CFG_PROCESS_ROLES=controller       # Role: controller only
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@controller1:9093,2@controller2:9093,3@controller3:9093  # Quorum participants
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER  # Listener name for controllers
+      - KAFKA_CFG_LISTENERS=CONTROLLER://:9093   # Bind controller listener
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT  # No encryption
+      - KAFKA_KRAFT_CLUSTER_ID=tan4668           # Fixed cluster ID for the KRaft mode
+    volumes:
+      - controller_data1:/bitnami/kafka
+
+  # ------------------------------------------------------------------------------
+  # Kafka Controller Node 2
+  # ------------------------------------------------------------------------------
+  controller2:
+    image: bitnami/kafka:3.9
+    container_name: controller2
+    networks:
+      - app-tier
+    environment:
+      - KAFKA_CFG_NODE_ID=2
+      - KAFKA_CFG_PROCESS_ROLES=controller
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@controller1:9093,2@controller2:9093,3@controller3:9093
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_LISTENERS=CONTROLLER://:9093
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT
+      - KAFKA_KRAFT_CLUSTER_ID=tan4668
+    volumes:
+      - controller_data2:/bitnami/kafka
+
+  # ------------------------------------------------------------------------------
+  # Kafka Controller Node 3
+  # ------------------------------------------------------------------------------
+  controller3:
+    image: bitnami/kafka:3.9
+    container_name: controller3
+    networks:
+      - app-tier
+    environment:
+      - KAFKA_CFG_NODE_ID=3
+      - KAFKA_CFG_PROCESS_ROLES=controller
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@controller1:9093,2@controller2:9093,3@controller3:9093
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_LISTENERS=CONTROLLER://:9093
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT
+      - KAFKA_KRAFT_CLUSTER_ID=tan4668
+    volumes:
+      - controller_data3:/bitnami/kafka
+
+  # ------------------------------------------------------------------------------
+  # Kafka Broker 1
+  # ------------------------------------------------------------------------------
+  kafka1:
+    image: bitnami/kafka:3.9
+    container_name: kafka1
+    networks:
+      - app-tier
+    ports:
+      - 9094:9094  # External access for clients
+    environment:
+      - KAFKA_CFG_NODE_ID=4                     # Unique broker node ID
+      - KAFKA_CFG_PROCESS_ROLES=broker           # Role: broker only
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@controller1:9093,2@controller2:9093,3@controller3:9093
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,EXTERNAL://:9094  # Internal (broker) and external (client) listeners
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka1:9092,EXTERNAL://localhost:9094  # How other nodes and clients reach this broker
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      - KAFKA_KRAFT_CLUSTER_ID=tan4668
+      - KAFKA_CFG_DEFAULT_REPLICATION_FACTOR=3      # Default replication factor for topics
+      - KAFKA_CFG_MIN_INSYNC_REPLICAS=2              # Minimum in-sync replicas for reliable writes
+      - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=3 # Internal topic replication (__consumer_offsets)
+    volumes:
+      - kafka_data1:/bitnami/kafka
+
+  # ------------------------------------------------------------------------------
+  # Kafka Broker 2
+  # ------------------------------------------------------------------------------
+  kafka2:
+    image: bitnami/kafka:3.9
+    container_name: kafka2
+    networks:
+      - app-tier
+    ports:
+      - 9095:9095
+    environment:
+      - KAFKA_CFG_NODE_ID=5
+      - KAFKA_CFG_PROCESS_ROLES=broker
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@controller1:9093,2@controller2:9093,3@controller3:9093
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,EXTERNAL://:9095
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka2:9092,EXTERNAL://localhost:9095
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      - KAFKA_KRAFT_CLUSTER_ID=tan4668
+      - KAFKA_CFG_DEFAULT_REPLICATION_FACTOR=3
+      - KAFKA_CFG_MIN_INSYNC_REPLICAS=2
+      - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=3
+    volumes:
+      - kafka_data2:/bitnami/kafka
+
+  # ------------------------------------------------------------------------------
+  # Kafka Broker 3
+  # ------------------------------------------------------------------------------
+  kafka3:
+    image: bitnami/kafka:3.9
+    container_name: kafka3
+    networks:
+      - app-tier
+    ports:
+      - 9096:9096
+    environment:
+      - KAFKA_CFG_NODE_ID=6
+      - KAFKA_CFG_PROCESS_ROLES=broker
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@controller1:9093,2@controller2:9093,3@controller3:9093
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,EXTERNAL://:9096
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka3:9092,EXTERNAL://localhost:9096
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      - KAFKA_KRAFT_CLUSTER_ID=tan4668
+      - KAFKA_CFG_DEFAULT_REPLICATION_FACTOR=3
+      - KAFKA_CFG_MIN_INSYNC_REPLICAS=2
+      - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=3
+    volumes:
+      - kafka_data3:/bitnami/kafka
+
+  # ------------------------------------------------------------------------------
+  # Kafka UI: Web Console for Monitoring and Management
+  # ------------------------------------------------------------------------------
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    depends_on:
+      - controller1
+      - controller2
+      - controller3
+      - kafka1
+      - kafka2
+      - kafka3
+    networks:
+      - app-tier
+    ports:
+      - 8080:8080  # Web UI available on localhost:8080
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=localCluster
+      - KAFKA_CLUSTERS_0_BOOTSTRAP_SERVERS=kafka1:9092,kafka2:9092,kafka3:9092
