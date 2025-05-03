@@ -1,132 +1,129 @@
-# Kafka Practical Demo (ZooKeeper)
+# Kafka Practical Demo
 
 ![Kafka Flow](./assets/kafka-part2.drawio.png)
 
-Welcome to this Kafka practical demo project!  
-This project is inspired by the amazing content from **SWE with Vivek Bharatha** — particularly his YouTube series:  
-**_Kafka fundamentals every developer must know - Part 2_**.  
-(Watch the full series [here](https://www.youtube.com/@swe-with-vivekbharatha))
+Welcome to this **Kafka practical demo project**!
+Inspired by the excellent **"Kafka Fundamentals"** series by [SWE with Vivek Bharatha](https://www.youtube.com/@swe-with-vivekbharatha), this hands-on setup helps you deeply understand how Kafka works in real-world microservice architectures.
 
-> 🚀 This project focuses on demonstrating **Kafka fundamentals** in a hands-on, end-to-end setup with local Docker infrastructure and multiple microservices simulating real-world event-driven communication.
+> 🚀 This project showcases **event-driven communication** using Kafka across multiple services with different Kafka deployment setups.
 
 ---
 
-## 📚 Concepts Covered
+## 📚 What You'll Learn
 
-- Apache Kafka Basics: Topics, Partitions, Producers, Consumers
-- Kafka Setup using Docker Compose
-- Kafka UI Overview
-- Producer Service: Publishing messages into topics
-- Consumer Services: Consuming messages from topics
-- Multiple Consumers & Consumer Groups
-- Partition Rebalancing (with live rebalancing examples)
-- Consumer Failover Handling
-- Benchmark Load Testing with `autocannon`
+* Kafka Core Concepts: Topics, Partitions, Brokers, Consumer Groups
+* Setting up Kafka using Docker (KRaft and ZooKeeper modes)
+* Producing and Consuming Events
+* Partition Rebalancing & Failover Handling
+* Load Testing with `autocannon`
+* Visualizing Topic/Consumer State with Kafka UI
 
 ---
 
-## 🛠 Project Structure
+## 🔧 Docker Setup Options
 
-| Folder/File            | Description                                                  |
-| ---------------------- | ------------------------------------------------------------ |
-| `docker-compose.yaml`   | Sets up Zookeeper, Kafka Broker, and Kafka UI locally         |
-| `src/init.ts`           | Bootstrap script to create topics and partitions             |
-| `src/order-service/`    | Kafka producer/consumer for handling order events             |
-| `src/mailer-service/`   | Kafka consumer for handling "order-created" email notifications |
-| `src/user-service/`     | Kafka consumer for handling "user-updated" and "order-created" events |
-| `src/types/`            | Shared TypeScript types and interfaces                       |
-| `src/ac.ts`             | Benchmarking script using autocannon to simulate load         |
-| `assets/`               | Architecture diagrams and flow charts                        |
-| `tsconfig.json`         | TypeScript configuration                                      |
+This project provides **3 Docker Compose setups** to run Kafka locally:
 
----
+| Mode             | File Path                   | Description                                                    |
+| ---------------- | ------------------------ | -------------------------------------------------------------- |
+| `kraft-combined` | `docker-compose.kraft.combine.yaml` | Kafka in KRaft mode (combined controller + broker per node)    |
+| `kraft-split`    | `docker-compose.kraft.split.yaml`    | Kafka in KRaft mode (dedicated controllers + separate brokers) |
+| `zookeeper`      | `docker-compose.zookeeper.yaml`      | Traditional setup using ZooKeeper                              |
 
-## 🐳 Local Kafka Setup (via Docker)
+### 💡 Choose one mode to run at a time.
 
-This project uses **Docker Compose** to spin up the following services:
-
-- **Zookeeper** (manages metadata for Kafka)
-- **Kafka Broker** (handles messages and topics)
-- **Kafka UI** (simple web interface to monitor topics and consumers)
+To bring up your chosen Kafka stack:
 
 ```bash
-# From project root
-docker-compose up -d
+# Example (kraft-combined):
+docker-compose -f docker-compose.kraft.combine.yaml up -d
 ```
 
-Services available:
-- Zookeeper → `localhost:2181`
-- Kafka Broker → `localhost:9094`
-- Kafka UI → `http://localhost:8080`
+### 🔌 Service Ports
+
+| Service             | Port             | Description                                     |
+| ------------------- | ---------------- | ----------------------------------------------- |
+| Kafka Brokers       | 9094, 9095, 9096 | External listeners for producer/consumer apps   |
+| Zookeeper (if used) | 2181             | Required for ZooKeeper-based mode               |
+| Kafka UI            | 8080             | Web UI to monitor topics, partitions, consumers |
 
 ---
 
-## ⚡ How to Run
+## 📁 Project Structure
 
-### 1. Bootstrap Kafka Topics
+| Path                  | Description                                 |
+| --------------------- | ------------------------------------------- |
+| `src/init.ts`         | Script to bootstrap Kafka topics            |
+| `src/order-service/`  | Producer service for order events           |
+| `src/mailer-service/` | Consumer service for email notifications    |
+| `src/user-service/`   | Consumer service for user and order updates |
+| `src/types/`          | Shared TypeScript interfaces                |
+| `src/ac.ts`           | Load test using `autocannon`                |
+| `assets/`             | Architecture diagrams                       |
+| `tsconfig.json`       | TypeScript config                           |
 
-Create necessary Kafka topics (with partitions):
+---
+
+## 🚀 How to Run
+
+### 1. Create Topics
 
 ```bash
 npm run init
 ```
 
-Topics created:
-- `order.created` → 3 partitions
-- `user.updated` → 1 partition
+This creates:
+
+* `order.created` (3 partitions)
+* `user.updated` (1 partition)
 
 ---
 
 ### 2. Start Services
 
-Each service has its own purpose:
+Each service simulates part of a real system:
 
-| Service | Role | How to Start |
-| :------ | :-- | :----------- |
-| Order Service | Producer | `npm run order-service` |
-| Mailer Service | Consumer Group (Mailer) | `npm run mailer-service` |
-| User Service | Consumer Group (User) | `npm run user-service` |
+| Service        | Role                    | Command                  |
+| -------------- | ----------------------- | ------------------------ |
+| Order Service  | Producer                | `npm run order-service`  |
+| Mailer Service | Consumer Group (mailer) | `npm run mailer-service` |
+| User Service   | Consumer Group (user)   | `npm run user-service`   |
 
 ---
 
-### 3. Load Test (Optional)
-
-You can simulate thousands of random orders using `autocannon`:
+### 3. Load Test Kafka (Optional)
 
 ```bash
 npm run ac
 ```
 
-This sends rapid HTTP requests to the **Order Service**, pushing thousands of events into Kafka.
+This triggers thousands of order events to simulate real load.
 
 ---
 
-## 🧠 Key Learnings from the Project
+## 🧠 Concepts Demonstrated
 
-- How Kafka manages **messages across partitions**.
-- How **Consumer Groups** split load among multiple consumers.
-- How **rebalancing** happens automatically when new consumers join or leave.
-- How **producer keys** ensure ordering within a partition.
-- How to **gracefully shutdown** Kafka consumers and producers.
-- How **load testing** affects topic partitions and consumer throughput.
+* Producer message routing using keys
+* Consumer group load balancing
+* Partition rebalancing and failover
+* Kafka topic replication and durability
+* Consumer throughput under load
 
 ---
 
-## 📷 Kafka Architecture Overview
+## 🖥️ Kafka Architecture Overview
 
-The following diagram shows how Order Service produces messages and multiple consumer groups (Mailer Services, User Services) consume them independently:
+The following diagram shows the producer-consumer interaction using Kafka:
 
 ![Kafka Architecture](./assets/kafka-part2.drawio.png)
 
 ---
 
-## 📖 Reference and Acknowledgements
+## 📖 Credits
 
-This project is inspired by:
+> 🎥 [Kafka Fundamentals Every Developer Must Know - Part 2](https://www.youtube.com/watch?v=YOUR_VIDEO_LINK)
+> By **SWE with Vivek Bharatha**
 
-> 🎥 [**Kafka fundamentals every developer must know - Part 2**](https://www.youtube.com/watch?v=YOUR_VIDEO_LINK)  
-> by **SWE with Vivek Bharatha**  
-> - YouTube: [@swe-with-vivekbharatha](https://www.youtube.com/@swe-with-vivekbharatha)
-> - LinkedIn: [Vivek Bharatha](https://linkedin.com/in/vivek-bharatha)
-> - GitHub: [vivekbharatha](https://github.com/vivekbharatha)
-> - Medium: [vivek.bharatha](https://medium.com/@vivek.bharatha)
+* YouTube: [@swe-with-vivekbharatha](https://www.youtube.com/@swe-with-vivekbharatha)
+* GitHub: [vivekbharatha](https://github.com/vivekbharatha)
+* Medium: [@vivek.bharatha](https://medium.com/@vivek.bharatha)
